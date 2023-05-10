@@ -51,30 +51,37 @@ const componentsFolder = path.join(__dirname, 'components');
 const regexp = new RegExp('{{\\s*(\\w+)\\s*}}');
 const template = path.join(__dirname, 'template.html');
 const index = path.join(pathToDistFolder, 'index.html');
-const indexWrite = fs.createWriteStream(index);
 
-const tmp = fs.createReadStream(template);
-let dt = '';
-tmp.on('data', (chunk) => {
-  dt += chunk.toString();
-  const lines = dt.split('\n');
-  for (let line of lines) {
-    if (regexp.test(line)) {
-      let tag = line.match(regexp)[1];
-      fs.readdir(componentsFolder, { withFileTypes: true }, (err, files) => {
-        if (err) throw err;
-        files.forEach((file) => {
-          if (file.name.split('.')[0] === tag) {
-            const filePath = path.join(componentsFolder, file.name);
-            const fileReadStream = fs.createReadStream(filePath);
-            fileReadStream.on('data', data => {
+async function replaceTags() {
+  const indexWrite = fs.createWriteStream(index);
+  const tmp = fs.createReadStream(template);
+  let dt = '';
+
+  tmp.on('data', async (chunk) => {
+    dt += chunk.toString();
+    const lines = dt.split('\n');
+    for (let line of lines) {
+      if (regexp.test(line)) {
+        let tag = line.match(regexp)[1];
+        const files = await fs.promises.readdir(componentsFolder, { withFileTypes: true });
+        const file = files.find((file) => file.name.split('.')[0] === tag);
+        if (file) {
+          const filePath = path.join(componentsFolder, file.name);
+          const fileReadStream = fs.createReadStream(filePath);
+          await new Promise((resolve) => {
+            fileReadStream.on('data', (data) => {
               indexWrite.write(data);
             });
-          }
-        });
-      });
-    } else {
-      indexWrite.write(line);
+            fileReadStream.on('end', () => {
+              resolve();
+            });
+          });
+        }
+      } else {
+        indexWrite.write(line);
+      }
     }
-  }
-});
+  });
+}
+
+replaceTags();
