@@ -9,14 +9,29 @@ fs.mkdir(pathToNewFolder,  { recursive: true }, (err) => {
   if (err) throw err;
 });
 
-fs.readdir(pathToFolder, (err, files) => {
+fs.readdir(pathToNewFolder, (err, files) => {
   if (err) throw err;
-  files.forEach((file) => {
-    const pathToFile = path.join(pathToFolder, file);
-    const pathToNewFile = path.join(pathToNewFolder, file);
+  if (files.length !== 0) {
+    for (let file of files) {
+      const filePath = path.join(pathToNewFolder, file);
+      fs.unlink(filePath, () => {
 
-    fs.copyFile(pathToFile, pathToNewFile, (err) => {
-      if (err) throw err;
+      });
+    }
+  }
+  copyFiles();
+});
+
+function copyFiles() {
+  fs.readdir(pathToFolder, (err, files) => {
+    if (err) throw err;
+    files.forEach((file) => {
+      const pathToFile = path.join(pathToFolder, file);
+      const pathToNewFile = path.join(pathToNewFolder, file);
+  
+      fs.copyFile(pathToFile, pathToNewFile, (err) => {
+        if (err) throw err;
+      });
     });
   });
-});
+}
